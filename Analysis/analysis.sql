@@ -109,4 +109,59 @@ from electric_vehicle_sales_by_state ev join dim_date d using(`date`)
 group by fiscal_year
 ;
 
+-- ev sold per category in eachfiscal year
+select fiscal_year,vehicle_category,sum(electric_vehicles_sold)/100000 as `Total EV Sold in Lakhs` 
+from electric_vehicle_sales_by_state ev join dim_date d using(date)
+group by fiscal_year,vehicle_category
+order by fiscal_year,`Total EV Sold in Lakhs` desc ;
+
+-- pr per ctegory in a fiscal year
+select fiscal_year,vehicle_category,
+sum(electric_vehicles_sold)*100/sum(total_vehicles_sold) as `Penetration rate` 
+from electric_vehicle_sales_by_state ev join dim_date d using(date)
+group by fiscal_year,vehicle_category
+order by fiscal_year,`Penetration rate`  desc ;
+
+-- top 3 states in each fiscal year by the ev sold 
+with cte as (
+select fiscal_year,state,sum(electric_vehicles_sold)/100000 as ev_sold 
+from electric_vehicle_sales_by_state join dim_date using(date)
+group by fiscal_year,state
+order by ev_sold desc
+),
+cte_find_rank as (
+select *,
+dense_rank() over(partition by fiscal_year order by ev_sold desc) as `rank`
+from cte
+)
+select fiscal_year,state,ev_sold as `EV sold in Lakhs`  from cte_find_rank where `rank` in (1,2,3);
+
+-- top 3 states in each fiscal year by their penetration rate
+with cte as (
+select fiscal_year,state,sum(electric_vehicles_sold)*100/sum(total_vehicles_sold) as pr 
+from electric_vehicle_sales_by_state join dim_date using(date)
+group by fiscal_year,state
+order by pr desc
+),
+cte_find_rank as (
+select *,
+dense_rank() over(partition by fiscal_year order by pr desc) as `rank`
+from cte
+)
+select fiscal_year,state,pr as `EV sold in Lakhs`  from cte_find_rank where `rank` in (1,2,3);
+
+
+-- total ev sold per category in states where the states have highest penetration rate
+with cte as(
+select state,sum(electric_vehicles_sold)*100/sum(total_vehicles_sold) as pr
+from electric_vehicle_sales_by_state join dim_date using(date)
+group by state
+order by pr desc
+limit 5
+)
+select state,vehicle_category , sum(electric_vehicles_sold)/1000 as ev_sold
+from electric_vehicle_sales_by_state
+where state in (select state from cte)
+group by state,vehicle_category
+order by state,ev_sold desc;
 
