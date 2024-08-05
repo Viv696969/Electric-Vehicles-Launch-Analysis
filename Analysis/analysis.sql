@@ -165,3 +165,37 @@ where state in (select state from cte)
 group by state,vehicle_category
 order by state,ev_sold desc;
 
+
+
+-- MAKER analysis
+with cte as(
+select maker,sum(electric_vehicles_sold) as ev_sold from 
+electric_vehicle_sales_by_makers
+where vehicle_category='4-Wheelers'
+group by maker
+order by ev_sold desc
+limit 5
+)
+select fiscal_year,`quarter`,maker,
+sum(electric_vehicles_sold) as ev_sold_
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+where vehicle_category='4-Wheelers' and maker in (select maker from cte)
+group by fiscal_year,`quarter`,maker
+order by fiscal_year,`quarter`,maker;
+
+with cte as(
+select maker,sum(electric_vehicles_sold) as ev_sold from 
+electric_vehicle_sales_by_makers
+where vehicle_category='4-Wheelers'
+group by maker
+order by ev_sold desc
+limit 5
+)
+select `quarter`,maker,
+sum(electric_vehicles_sold) as ev_sold_
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+where vehicle_category='4-Wheelers' and maker in (select maker from cte)
+group by `quarter`,maker
+order by `quarter`,maker;
+
+
