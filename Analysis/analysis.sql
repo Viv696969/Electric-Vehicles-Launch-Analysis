@@ -198,4 +198,34 @@ where vehicle_category='4-Wheelers' and maker in (select maker from cte)
 group by `quarter`,maker
 order by `quarter`,maker;
 
+select quarter,vehicle_category,round(sum(electric_vehicles_sold)/1000,2)
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+group by quarter,vehicle_category
+order by quarter,vehicle_category;
+
+select fiscal_year,vehicle_category,round(sum(electric_vehicles_sold)/1000,2) as `EV Sold `
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+group by fiscal_year,vehicle_category
+order by fiscal_year,vehicle_category;
+
+-- 5
+
+select state,sum(electric_vehicles_sold)/100000
+,round(sum(electric_vehicles_sold)*100/sum(total_vehicles_sold),2) 
+from electric_vehicle_sales_by_state ev join dim_date d using(date)
+where state in ('Delhi','Karnataka') and fiscal_year=2024
+group by state
+order by state desc; 
+
+
+
+
+
+
+
+
+
+
+
+
 
