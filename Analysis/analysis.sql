@@ -287,4 +287,55 @@ round((power((ending/beginning),(1/3))-1)*100,2) as CAGR
  from cte_2022 join cte_2024 using(state)
  order by CAGR desc
  limit 10;
+ 
+-- 8
+select fiscal_year,date_format(str_to_date(`date`,'%d-%b-%y'),'%M') as `Month`,sum(electric_vehicles_sold) as `EV Sales` 
+from electric_vehicle_sales_by_state join dim_date using(date)
+group by fiscal_year,date_format(str_to_date(`date`,'%d-%b-%y'),'%M')
+order by fiscal_year,
+CASE `Month`
+        WHEN 'January' THEN 1
+        WHEN 'February' THEN 2
+        WHEN 'March' THEN 3
+        WHEN 'April' THEN 4
+        WHEN 'May' THEN 5
+        WHEN 'June' THEN 6
+        WHEN 'July' THEN 7
+        WHEN 'August' THEN 8
+        WHEN 'September' THEN 9
+        WHEN 'October' THEN 10
+        WHEN 'November' THEN 11
+        WHEN 'December' THEN 12
+    END
+    ;
 
+desc electric_vehicle_sales_by_state;
+
+-- 9
+with states_cte as (
+select state,sum(electric_vehicles_sold)*100/sum(total_vehicles_sold) as pr from electric_vehicle_sales_by_state
+group by state
+order by pr desc
+limit 10
+),
+cte_2022 as (
+select state,sum(electric_vehicles_sold) as beginning
+from electric_vehicle_sales_by_state join dim_date using(date)
+where fiscal_year=2022 and state in (select state from states_cte)
+group by state
+),
+cte_2024 as (
+select state,sum(electric_vehicles_sold) as ending
+from electric_vehicle_sales_by_state join dim_date using(date)
+where fiscal_year=2024 and state in (select state from states_cte)
+group by state
+),cte_final as (
+select state, ending,
+power(ending/beginning,1.0/3)-1 as cagr
+ from cte_2022 join cte_2024 using(state)
+ order by cagr desc
+ )
+ # estimated=ending value * (1+cagr)**years determined
+ select state,round(cagr*100,2) as cagr,round(ending*power((1+cagr),6)) as `2030 estimated amount`,
+ ending as `2024 sales`
+ from cte_final;
