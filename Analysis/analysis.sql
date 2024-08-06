@@ -210,22 +210,81 @@ order by fiscal_year,vehicle_category;
 
 -- 5
 
-select state,sum(electric_vehicles_sold)/100000
-,round(sum(electric_vehicles_sold)*100/sum(total_vehicles_sold),2) 
+select state,sum(electric_vehicles_sold)/100000 as `EV Sold`
+,round(sum(electric_vehicles_sold)*100/sum(total_vehicles_sold),2) as `Penetration Rate` 
 from electric_vehicle_sales_by_state ev join dim_date d using(date)
 where state in ('Delhi','Karnataka') and fiscal_year=2024
 group by state
 order by state desc; 
 
+-- 6
+with cte as (
+select maker,sum(electric_vehicles_sold) as ev_sold
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+where vehicle_category='4-Wheelers'
+group by maker
+order by  ev_sold desc
+limit 5
+),cte1 as(
+select fiscal_year,maker,
+sum(electric_vehicles_sold) as `EV Sold`
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+where vehicle_category='4-Wheelers' and maker in (select maker from cte)
+group by fiscal_year,maker
+order by maker
+),cte2 as (
+select *,
+lead(`EV Sold`,2) over(partition by maker order by fiscal_year) as ending_value
+from cte1
+)
+select maker,round((power((ending_value/`EV Sold`),1.0/3)-1 )*100,2) as CAGR
+from cte2
+where ending_value is not null;
 
 
 
 
 
 
+-- select maker,sum(electric_vehicles_sold) as ev_sold
+-- from electric_vehicle_sales_by_makers join dim_date d using(date)
+-- where vehicle_category='4-Wheelers'
+-- group by maker
+-- order by  ev_sold desc
+-- limit 5;
 
 
 
+with cte as (
+select maker,sum(electric_vehicles_sold) as ev_sold
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+where vehicle_category='4-Wheelers'
+group by maker
+order by  ev_sold desc
+limit 5
+)
+select fiscal_year,maker,
+sum(electric_vehicles_sold) as `EV Sold`
+from electric_vehicle_sales_by_makers join dim_date d using(date)
+where vehicle_category='4-Wheelers' and maker in (select maker from cte)
+group by fiscal_year,maker
+order by maker;
 
-
+-- 8
+with cte_2022 as (
+select fiscal_year,state,sum(total_vehicles_sold) as beginning
+from electric_vehicle_sales_by_state join dim_date d using(date)
+where fiscal_year=2022
+group by fiscal_year,state
+),cte_2024 as (
+select fiscal_year,state,sum(total_vehicles_sold) as ending
+from electric_vehicle_sales_by_state join dim_date d using(date)
+where fiscal_year=2024
+group by fiscal_year,state
+)
+select state,
+round((power((ending/beginning),(1/3))-1)*100,2) as CAGR
+ from cte_2022 join cte_2024 using(state)
+ order by CAGR desc
+ limit 10;
 
