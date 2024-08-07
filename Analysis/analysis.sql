@@ -339,3 +339,46 @@ power(ending/beginning,1.0/3)-1 as cagr
  select state,round(cagr*100,2) as cagr,round(ending*power((1+cagr),6)) as `2030 estimated amount`,
  ending as `2024 sales`
  from cte_final;
+
+with cte_2022 as (
+select vehicle_category,sum(electric_vehicles_sold) as `sales_2022`
+from electric_vehicle_sales_by_state join dim_date d using(date)
+where fiscal_year=2022
+group by vehicle_category
+),cte_2023 as (
+select vehicle_category,sum(electric_vehicles_sold) as  `sales_2023`
+from electric_vehicle_sales_by_state join dim_date d using(date)
+where fiscal_year=2023
+group by vehicle_category
+),cte_2024 as (
+select vehicle_category,sum(electric_vehicles_sold) as  `sales_2024`
+from electric_vehicle_sales_by_state join dim_date d using(date)
+where fiscal_year=2024
+group by vehicle_category
+),cte_revenue as (
+select *,
+case 
+	when vehicle_category='2-Wheelers' then sales_2022*85000.00
+    else sales_2022*1500000.00
+end as 2022_revenue,
+case 
+	when vehicle_category='2-Wheelers' then sales_2023*85000.00
+    else sales_2023*1500000.00
+end as 2023_revenue,
+case 
+	when vehicle_category='2-Wheelers' then sales_2024*85000.00
+    else sales_2024*1500000.00
+end as 2024_revenue
+ from cte_2022 join cte_2023 using(vehicle_category)
+join cte_2024 using(vehicle_category)
+)
+select *,
+round((2024_revenue-2022_revenue)*100/2022_revenue,2) as rev_growth_22_vs_24,
+round((2024_revenue-2023_revenue)*100/2023_revenue,2) as rev_growth_23_vs_24
+from cte_revenue;
+
+
+
+
+
+
