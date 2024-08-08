@@ -358,15 +358,15 @@ group by vehicle_category
 ),cte_revenue as (
 select *,
 case 
-	when vehicle_category='2-Wheelers' then sales_2022*85000.00
+	when vehicle_category='2-Wheelers' then (sales_2022*85000.00)/1000000
     else sales_2022*1500000.00
 end as 2022_revenue,
 case 
-	when vehicle_category='2-Wheelers' then sales_2023*85000.00
+	when vehicle_category='2-Wheelers' then (sales_2023*85000.00)/1000000
     else sales_2023*1500000.00
 end as 2023_revenue,
 case 
-	when vehicle_category='2-Wheelers' then sales_2024*85000.00
+	when vehicle_category='2-Wheelers' then (sales_2024*85000.00)/1000000
     else sales_2024*1500000.00
 end as 2024_revenue
  from cte_2022 join cte_2023 using(vehicle_category)
@@ -378,7 +378,57 @@ round((2024_revenue-2023_revenue)*100/2023_revenue,2) as rev_growth_23_vs_24
 from cte_revenue;
 
 
+-- top vehicle category each year
 
+-- with cte as ( 
+select fiscal_year,vehicle_category,round(sum(electric_vehicles_sold),2) as `EV Sold in Lakhs`
+from electric_vehicle_sales_by_makers join dim_date using(date)
+where vehicle_category='4-Wheelers'
+group by fiscal_year,vehicle_category
+order by fiscal_year;
+-- ),cte_1 as (
+-- select *,
+-- dense_rank() over(partition by fiscal_year order by ev_sold desc) as rank_
+-- from cte
+-- )
+-- select * from cte_1 where rank_=1;
+
+
+-- cagr for top ev makers in 2 wheelers
+with cte as (
+select maker,sum(electric_vehicles_sold) as `EV Sold` from electric_vehicle_sales_by_makers
+where vehicle_category='2-Wheelers'
+group by maker
+order by `EV Sold` desc
+limit 5
+),cte_2022 as (
+select maker,sum(electric_vehicles_sold) as beginning from electric_vehicle_sales_by_makers
+join dim_date using(date)
+where vehicle_category='2-Wheelers' and maker in (select maker from cte) and fiscal_year=2022
+group by maker
+),cte_2024 as (
+select maker,sum(electric_vehicles_sold) as ending from electric_vehicle_sales_by_makers
+join dim_date using(date)
+where vehicle_category='2-Wheelers' and maker in (select maker from cte) and fiscal_year=2024
+group by maker
+)
+select *,
+round((power((ending/beginning),1/3)+1)*100,2) as cagr
+ from cte_2022 join cte_2024
+using(maker)
+order by cagr;
+
+with cte as (
+select maker,sum(electric_vehicles_sold) as `EV Sold` from electric_vehicle_sales_by_makers
+where vehicle_category='2-Wheelers'
+group by maker
+order by `EV Sold` desc
+limit 5
+)
+select fiscal_year,maker,sum(electric_vehicles_sold)/1000 as `EV Sold`
+from electric_vehicle_sales_by_makers join dim_date using(date)
+where vehicle_category='2-Wheelers' and maker in (select maker from cte)
+group by fiscal_year,maker;
 
 
 
